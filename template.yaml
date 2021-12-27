@@ -1,0 +1,50 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM template for BoilerIO Alexa Smart Home Skill lambda function
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+
+Parameters:
+  SkillId:
+    Type: String
+  
+  BoilerIOBaseURL:
+    Type: String
+
+  # Ideally this would come from a property managed by System Manager.  This is a shared key that allows
+  # the skill to pass an OAuth access token to do authentication, rather than a Google-signed JWT representing
+  # an identity (the latter includes a field confirming the token was created by this application).
+  BoilerIOClientSecret:
+    Type: String
+
+Resources:
+  BoilerIOSkillFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: boilerio-smart-home-skill
+      CodeUri: boilerio_skill/
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.8
+      Environment:
+        Variables:
+          BASE_URL: !Ref BoilerIOBaseURL
+          CLIENT_SECRET: !Ref BoilerIOClientSecret
+
+  BoilerIOSkillPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref BoilerIOSkillFunction
+      Principal: 'alexa-connectedhome.amazon.com'
+      EventSourceToken: !Ref SkillId
+
+Outputs:
+  BoilerIOSkillFunction:
+    Description: "BoilerIO skill Lambda Function ARN"
+    Value: !GetAtt BoilerIOSkillFunction.Arn
+  BoilerIOSkillFunctionIamRole:
+    Description: "Implicit IAM Role created for BoilerIO function"
+    Value: !GetAtt BoilerIOSkillFunctionRole.Arn
